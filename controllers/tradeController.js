@@ -5,6 +5,7 @@ import User from '../models/User.js'
 import { DateTime } from 'luxon'
 import { applyReferralBonus } from '../utils/referralBonus.js'
 
+
 export const placeTrade = async (req, res) => {
   try {
     const { signalId, amount, direction } = req.body

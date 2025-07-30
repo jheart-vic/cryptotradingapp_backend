@@ -1,11 +1,9 @@
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import User from '../models/User.js'
-
-import { sendVerificationEmail } from '../utils/mailer.js'
 import crypto from 'crypto'
-import bcrypt from 'bcryptjs'
-import User from '../models/User.js'
+import { sendVerificationEmail } from '../utils/mailer.js'
+
 
 const generateInviteCode = () => {
   return Math.random().toString(36).substring(2, 8).toUpperCase()

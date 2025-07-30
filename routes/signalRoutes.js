@@ -1,8 +1,11 @@
 // routes/signalRoutes.js
 import express from 'express'
-import auth from '../middleware/auth.js'
-import isAdmin from '../middleware/isAdmin.js'
-import { createSignal, getActiveSignals } from '../controllers/signalController.js'
+import { auth, isAdmin } from '../middleware/auth.js'
+
+import {
+  createSignal,
+  getActiveSignals
+} from '../controllers/signalController.js'
 
 const router = express.Router()
 

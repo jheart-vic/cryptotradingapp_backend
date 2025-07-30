@@ -3,7 +3,7 @@ import { DateTime } from 'luxon'
 import Trade from '../models/Trade.js'
 import Signal from '../models/Signal.js'
 import User from '../models/User.js'
-import { applyReferralBonus } from '../utils.js/referralBonus.js'
+import { applyReferralBonus } from '../utils/referralBonus.js'
 
 
 const ZONE = 'Africa/Lagos'
