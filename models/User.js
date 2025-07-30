@@ -1,0 +1,33 @@
+import mongoose from 'mongoose'
+
+const userSchema = new mongoose.Schema({
+  username: { type: String, required: true },
+  phone: { type: String, unique: true, required: true },
+  email: { type: String, unique: true, required: true },
+  password: { type: String, required: true },
+
+  role: { type: String, enum: ['user', 'admin'], default: 'user' },
+
+  inviteCode: { type: String, unique: true },     // Unique code for sharing
+  invitedBy: { type: String, default: null },      // Referral code used to sign up
+
+  level: { type: Number, default: 0 },
+
+  balance: { type: Number, default: 0 },
+  totalDeposit: { type: Number, default: 0 },
+  totalWithdraw: { type: Number, default: 0 },
+
+  cryptoAddress: { type: String, default: '' },
+  bankName: { type: String, default: '' },
+  bankAccount: { type: String, default: '' },
+
+  isVerified: { type: Boolean, default: false },
+  verificationCode: String,
+  verificationCodeExpires: Date,
+
+  hasTraded: { type: Boolean, default: false },
+
+  createdAt: { type: Date, default: Date.now }
+})
+
+export default mongoose.model('User', userSchema)
