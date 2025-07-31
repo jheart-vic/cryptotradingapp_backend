@@ -1,4 +1,4 @@
-import Trade from "../models/Trade"
+import Trade from "../models/Trade.js"
 import User from '../models/User.js'
 import Transaction from '../models/Transaction.js'
 
@@ -35,11 +35,6 @@ export const getUserProfile = async (req, res) => {
       balance: user.balance,
       totalDeposit,
       totalWithdraw,
-
-      level: user.level,
-      hasTraded: user.hasTraded,
-      isVerified: user.isVerified,
-      createdAt: user.createdAt,
     })
   } catch (err) {
     res.status(500).json({ msg: err.message })
@@ -55,7 +50,7 @@ export const getReferralInfo = async (req, res) => {
     }
 
     // Generate the referral link
-    const referralLink = `https://adm-worldwide.com/register?code=${user.inviteCode}`
+    const referralLink = `https://KubraX.com/register?code=${user.inviteCode}`
 
     res.json({ referralCode: user.inviteCode, referralLink })
   } catch (err) {

@@ -9,7 +9,7 @@ const OTP_EXPIRY_MINUTES = 10;
 const COOLDOWN_SECONDS = 60;
 
 const generateInviteCode = () => {
-  return Math.random().toString(36).substring(2, 8).toUpperCase()
+  return Math.floor(100000 + Math.random() * 900000).toString()
 }
 
 export const register = async (req, res) => {
@@ -142,5 +142,67 @@ export const login = async (req, res) => {
     res.json({ token, user })
   } catch (err) {
     res.status(500).json({ msg: err.message })
+  }
+}
+
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body
+    if (!email) return res.status(400).json({ error: 'Email is required' })
+
+    const user = await User.findOne({ email })
+    if (!user) return res.status(404).json({ error: 'User not found' })
+
+    // Generate 6-digit reset code
+    const resetCode = Math.floor(100000 + Math.random() * 900000).toString()
+    const expires = DateTime.now().plus({ minutes: 10 }).toJSDate()
+
+    user.resetCode = resetCode
+    user.resetCodeExpires = expires
+    await user.save()
+
+    // Send code via email
+    await sendVerificationEmail(email, resetCode)
+
+    res.json({ message: 'Reset code sent to email' })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Something went wrong' })
+  }
+}
+
+export const resetPassword = async (req, res) => {
+  try {
+    const { email, resetCode, newPassword, confirmPassword } = req.body
+
+    if (!email || !resetCode || !newPassword || !confirmPassword) {
+      return res.status(400).json({ error: 'All fields are required' })
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ error: 'Passwords do not match' })
+    }
+
+    const user = await User.findOne({ email, resetCode })
+    if (!user) {
+      return res.status(400).json({ error: 'Invalid reset code or email' })
+    }
+
+    const isExpired = DateTime.now() > DateTime.fromJSDate(user.resetCodeExpires)
+    if (isExpired) {
+      return res.status(400).json({ error: 'Reset code has expired' })
+    }
+
+    // Hash new password
+    const hashed = await bcrypt.hash(newPassword, 10)
+    user.password = hashed
+    user.resetCode = undefined
+    user.resetCodeExpires = undefined
+    await user.save()
+
+    res.json({ message: 'Password has been reset successfully' })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Internal server error' })
   }
 }

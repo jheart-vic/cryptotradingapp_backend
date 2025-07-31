@@ -7,6 +7,8 @@ import authRoutes from './routes/authRoutes.js'
 import teamRoutes from './routes/teamRoutes.js'
 import tradeRoutes from './routes/tradeRoutes.js'
 import signalRoutes from './routes/signalRoutes.js'
+import userRoutes from './routes/userRoutes.js'
+import spinRoutes from './routes/spinRoutes.js'
 
 
 
@@ -22,6 +24,9 @@ app.use('/api/auth', authRoutes)
 app.use('/api/team', teamRoutes)
 app.use('/api/trade', tradeRoutes)
 app.use('/api/signal', signalRoutes)
+app.use('/api/user', userRoutes)
+app.use('/spin', spinRoutes)
+
 
 
 

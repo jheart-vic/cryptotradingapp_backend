@@ -8,8 +8,8 @@ const userSchema = new mongoose.Schema({
 
   role: { type: String, enum: ['user', 'admin'], default: 'user' },
 
-  inviteCode: { type: String, unique: true },     // Unique code for sharing
-  invitedBy: { type: String, default: null },      // Referral code used to sign up
+  inviteCode: { type: String, unique: true },
+  invitedBy: { type: String, default: null },
 
   level: { type: Number, default: 0 },
 
@@ -24,8 +24,10 @@ const userSchema = new mongoose.Schema({
   isVerified: { type: Boolean, default: false },
   verificationCode: String,
   verificationCodeExpires: Date,
-
+  resetCode: String,
+  resetCodeExpires: Date,
   hasTraded: { type: Boolean, default: false },
+  spins: { type: Number, default: 0 },
 
   createdAt: { type: Date, default: Date.now }
 })

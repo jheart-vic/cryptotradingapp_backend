@@ -4,6 +4,7 @@ import Signal from '../models/Signal.js'
 import User from '../models/User.js'
 import { DateTime } from 'luxon'
 import { applyReferralBonus } from '../utils/referralBonus.js'
+import History from '../models/History.js'
 
 
 export const placeTrade = async (req, res) => {
@@ -61,6 +62,14 @@ export const placeTrade = async (req, res) => {
       duration: signal.duration
     })
 
+
+    // ✅ Log trade in history
+    await History.create({
+      user: user._id,
+      type: 'trade',
+      amount: tradeAmount,
+      message: `Placed a trade on ${signal.coin} (${direction}) with ₦${tradeAmount}`,
+    })
     // Referral bonus
     await applyReferralBonus(userId, tradeAmount)
 
