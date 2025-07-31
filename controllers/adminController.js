@@ -10,7 +10,7 @@ import Trade from '../models/Trade.js'
 export const getAdminDashboardStats = async (req, res) => {
   try {
     const totalUsers = await User.countDocuments()
-    const totalInvested = await Investment.aggregate([
+    const totalInvested = await Transaction.aggregate([
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ])
     const totalBalance = await User.aggregate([
