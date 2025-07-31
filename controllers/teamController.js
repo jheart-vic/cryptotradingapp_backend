@@ -1,3 +1,5 @@
+import { getReferralTree } from '../utils/referral.js'
+
 export const getMyTeam = async (req, res) => {
   try {
     const result = await getReferralTree(req.user._id)
