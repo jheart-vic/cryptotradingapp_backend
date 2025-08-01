@@ -4,7 +4,7 @@ import { getUserProfile, getReferralInfo, getUserTrades } from '../controllers/u
 
 const router = express.Router();
 
-router.get('/profile', auth, getUserProfile);
+router.get('/me', auth, getUserProfile);
 router.get('/referral-link', auth, getReferralInfo);
 router.get('/my-trades', auth, getUserTrades);
 

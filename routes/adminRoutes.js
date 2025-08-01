@@ -3,6 +3,7 @@ import {
   addUserBonus,
   getSignalHistory,
   createSignal,
+  giveSpin,
   getSwitches,
   toggleSwitch,
   getAllWithdrawals,
@@ -12,36 +13,45 @@ import {
   toggleUserHold,
   deleteUser,
   getAllUsers,
-  getAdminDashboardStats
+  getAdminDashboardStats,
+  registerAdmin,
+  loginAdmin
 } from '../controllers/adminController.js'
+import { auth, isAdmin } from '../middleware/auth.js'
 
 const router = express.Router()
 
+// Admin Auth
+router.post('/admin-register', registerAdmin)
+router.post('/admin-login', loginAdmin)
+
 // 📊 Admin dashboard stats
-router.get('/dashboard-stats', getAdminDashboardStats)
+router.get('/dashboard-stats',auth, isAdmin, getAdminDashboardStats)
 
 // 👥 Users
-router.get('/users', getAllUsers)
-router.delete('/users/:id', deleteUser)
-router.put('/users/:id/toggle-hold', toggleUserHold)
-router.post('/users/:id/impersonate', impersonateUser)
-router.post('/users/:id/bonus', addUserBonus) // ✅ Give bonus to user
-
+router.get('/users',auth, isAdmin, getAllUsers)
+router.delete('/users/:id',auth, isAdmin, deleteUser)
+router.put('/users/:id/toggle-hold',auth, isAdmin, toggleUserHold)
+router.post('/users/:userId/impersonate',auth, isAdmin, impersonateUser)
+router.post('/users/:userId/bonus',auth, isAdmin, addUserBonus)
 // 💹 Trades
-router.get('/trades', getAllTrades)
+router.get('/trades',auth, isAdmin, getAllTrades)
 
 // 💸 Deposits
-router.get('/deposits', getAllDeposits)
+router.get('/deposits',auth, isAdmin, getAllDeposits)
 
 // 🏦 Withdrawals
-router.get('/withdrawals', getAllWithdrawals)
+router.get('/withdrawals',auth, isAdmin, getAllWithdrawals)
 
 // 📶 Signals
-router.post('/signals', createSignal)
-router.get('/signals/history', getSignalHistory)
+router.post('/signals',auth, isAdmin, createSignal)
+router.get('/signals/history',auth, isAdmin, getSignalHistory)
 
 // ⚙️ Feature switches
-router.get('/switches', getSwitches)
-router.put('/switches/:key/toggle', toggleSwitch)
+router.get('/switches',auth, isAdmin, getSwitches)
+router.put('/switches/:key/toggle',auth, isAdmin, toggleSwitch)
+
+// 🎡 Spin Wheel
+router.post('/give-spin',auth, isAdmin, giveSpin)
 
 export default router

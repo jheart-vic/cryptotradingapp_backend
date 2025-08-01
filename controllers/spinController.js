@@ -15,26 +15,6 @@ const allPrizes = [
 // But we define which prizes the user can actually win:
 const winRange = [0.5, 1.0, 1.5, 2.0]
 
-
-// Admin gives a spin to a user
-export const giveSpin = async (req, res) => {
-  const { phone, spins = 1 } = req.body
-
-  const user = await User.findOne({ phone })
-  if (!user) return res.status(404).json({ message: 'User not found' })
-
-  user.spins += spins
-  await user.save()
- await History.create({
-    user: user._id,
-    type: 'spin-reward',
-    message: `You won 1 spin wheel from admin`,
-  })
-  res.json({ message: `${spins} spin(s) given to ${user.username}`, currentSpins: user.spins })
-}
-
-
-// 🟢 Give spin to upline when downline invests
 // 🟢 Give spin to upline when downline invests
 export const giveSpinToUpline = async (downlineUserId) => {
   const downline = await User.findById(downlineUserId);

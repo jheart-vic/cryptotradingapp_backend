@@ -9,6 +9,7 @@ import tradeRoutes from './routes/tradeRoutes.js'
 import signalRoutes from './routes/signalRoutes.js'
 import userRoutes from './routes/userRoutes.js'
 import spinRoutes from './routes/spinRoutes.js'
+import  adminRoutes from './routes/adminRoutes.js'
 
 
 
@@ -25,7 +26,8 @@ app.use('/api/team', teamRoutes)
 app.use('/api/trade', tradeRoutes)
 app.use('/api/signal', signalRoutes)
 app.use('/api/user', userRoutes)
-app.use('/spin', spinRoutes)
+app.use('/api/spin', spinRoutes)
+app.use('/api/admin', adminRoutes)
 
 
 

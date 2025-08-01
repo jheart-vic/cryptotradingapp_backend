@@ -1,10 +1,81 @@
 import jwt from 'jsonwebtoken'
+import bcrypt from 'bcryptjs'
 import User from '../models/User.js'
 import Transaction from '../models/Transaction.js'
 import Signal from '../models/Signal.js'
+import { DateTime } from 'luxon'
 import History from '../models/History.js'
 import Settings from '../models/Settings.js'
 import Trade from '../models/Trade.js'
+import mongoose from 'mongoose'
+
+     //Admin Auth
+//  Registration
+export const registerAdmin = async (req, res) => {
+  const { email, password } = req.body
+
+  try {
+    // Check if already exists
+    const existing = await User.findOne({ email })
+    if (existing) {
+      return res.status(400).json({ error: 'Admin already exists' })
+    }
+
+    const hashed = await bcrypt.hash(password, 10)
+
+    const admin = await User.create({
+      email,
+      password: hashed,
+      role: 'admin',
+      isVerified: true
+    })
+
+    res.status(201).json({
+      message: 'Admin created successfully',
+      admin: {
+        id: admin._id,
+        username: admin.username,
+        email: admin.email
+      }
+    })
+  } catch (err) {
+    console.error('Admin registration error:', err)
+    res.status(500).json({ error: 'Server error while creating admin' })
+  }
+}
+
+// Admin Login
+export const loginAdmin = async (req, res) => {
+  const { email, password } = req.body
+
+  try {
+    const admin = await User.findOne({ email, role: 'admin' })
+    if (!admin) return res.status(404).json({ error: 'Admin not found' })
+
+    const isMatch = await bcrypt.compare(password, admin.password)
+    if (!isMatch) return res.status(401).json({ error: 'Invalid credentials' })
+
+    const token = jwt.sign(
+      { id: admin._id, role: admin.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    )
+
+    res.json({
+      message: 'Login successful',
+      token,
+      admin: {
+        id: admin._id,
+        username: admin.username,
+        email: admin.email,
+        role: admin.role
+      }
+    })
+  } catch (err) {
+    console.error('Admin login error:', err)
+    res.status(500).json({ error: 'Server error during login' })
+  }
+}
 
 // 1. Dashboard overview
 export const getAdminDashboardStats = async (req, res) => {
@@ -186,18 +257,34 @@ export const getSwitches = async (req, res) => {
 // 7. Signal Generation
 export const createSignal = async (req, res) => {
   try {
-    const { currencyPair, direction, startTime, endTime } = req.body
+    const { coin, direction, duration, profitRate } = req.body
+
+    if (!coin || !direction || !duration || !profitRate) {
+      return res.status(400).json({ msg: 'All fields are required' })
+    }
+
+    const startTime = DateTime.now().setZone('Africa/Lagos')
+    const endTime = startTime.plus({ hours: 2 })
+
+    const start = startTime.toJSDate()
+    const end = endTime.toJSDate()
+
     const signal = await Signal.create({
-      currencyPair,
+      coin,
       direction,
-      startTime,
-      endTime
+      duration,
+      profitRate,
+      startTime: start,
+      endTime: end,
+      createdBy: req.user._id
     })
+
     res.json({ msg: 'Signal created', signal })
   } catch (err) {
     res.status(500).json({ msg: err.message })
   }
 }
+
 
 export const getSignalHistory = async (req, res) => {
   try {
@@ -215,6 +302,10 @@ export const addUserBonus = async (req, res) => {
 
   if (!admin || admin.role !== 'admin') {
     return res.status(403).json({ msg: 'Unauthorized' })
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    return res.status(400).json({ msg: 'Invalid user ID' })
   }
 
   try {
@@ -235,4 +326,22 @@ export const addUserBonus = async (req, res) => {
   } catch (err) {
     res.status(500).json({ msg: err.message })
   }
+}
+
+
+// Admin gives a spin to a user
+export const giveSpin = async (req, res) => {
+  const { phone, spins = 1 } = req.body
+
+  const user = await User.findOne({ phone })
+  if (!user) return res.status(404).json({ message: 'User not found' })
+
+  user.spins += spins
+  await user.save()
+ await History.create({
+    user: user._id,
+    type: 'spin-reward',
+    message: `You won 1 spin wheel from admin`,
+  })
+  res.json({ message: `${spins} spin(s) given to ${user.username}`, currentSpins: user.spins })
 }
