@@ -9,7 +9,7 @@ const historySchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['referral-bonus', 'deposit', 'withdrawal', 'trade', 'salary', 'admin-bonus', 'spin-reward'],
+    enum: ['bonus', 'deposit', 'withdrawal', 'trade', 'salary', 'spin-reward'],
     required: true,
   },
   amount: {

@@ -317,7 +317,7 @@ export const addUserBonus = async (req, res) => {
 
     await History.create({
       user: user._id,
-      type: 'admin-bonus',
+      type: 'bonus',
       amount,
       message: message || `Bonus of ₦${amount} received from Admin`,
     })
