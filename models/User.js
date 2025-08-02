@@ -8,7 +8,7 @@ const userSchema = new mongoose.Schema({
 
   role: { type: String, enum: ['user', 'admin'], default: 'user' },
 
-  inviteCode: { type: String, unique: true },
+  inviteCode: { type: String, unique: true, sparse: true },
   invitedBy: { type: String, default: null },
 
   level: { type: Number, default: 0 },
