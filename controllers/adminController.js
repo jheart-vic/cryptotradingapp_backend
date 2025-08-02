@@ -345,3 +345,26 @@ export const giveSpin = async (req, res) => {
   })
   res.json({ message: `${spins} spin(s) given to ${user.username}`, currentSpins: user.spins })
 }
+
+// Get recent deposits and withdrawals for admin dashboard
+export const getRecentActivities = async (req, res) => {
+  try {
+    const deposits = await Transaction.find({ type: 'deposit' })
+      .populate('userId', 'username email')
+      .sort({ createdAt: -1 })
+      .limit(5);
+
+    const withdrawals = await Transaction.find({ type: 'withdraw' })
+      .populate('userId', 'username email')
+      .sort({ createdAt: -1 })
+      .limit(5);
+
+    const recent = [...deposits, ...withdrawals]
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 6); // combine and take top 6 most recent
+
+    res.json(recent);
+  } catch (err) {
+    res.status(500).json({ msg: err.message });
+}
+};

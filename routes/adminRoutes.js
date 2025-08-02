@@ -15,7 +15,8 @@ import {
   getAllUsers,
   getAdminDashboardStats,
   registerAdmin,
-  loginAdmin
+  loginAdmin,
+  getRecentActivities
 } from '../controllers/adminController.js'
 import { auth, isAdmin } from '../middleware/auth.js'
 
@@ -53,5 +54,6 @@ router.put('/switches/:key/toggle',auth, isAdmin, toggleSwitch)
 
 // 🎡 Spin Wheel
 router.post('/give-spin',auth, isAdmin, giveSpin)
+router.get('/recent-activities', auth, isAdmin, getRecentActivities);
 
 export default router
