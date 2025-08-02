@@ -89,7 +89,7 @@ export const placeTrade = async (req, res) => {
     await History.create({
       user: user._id,
       type: 'trade',
-      amount: result === 'win' ? profit : 0,
+       amount: result === 'win' ? profit : -amount,
       message:
         result === 'win'
           ? `Trade won on ${signal.coin}, earned ₦${profit}`
