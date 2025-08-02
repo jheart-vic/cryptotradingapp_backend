@@ -1,5 +1,7 @@
 import Trade from "../models/Trade.js"
-import User from '../models/User.js'
+import cloudinary from '../utils/cloudinary.js';
+import User from '../models/User.js';
+import { Readable } from 'stream';
 import Transaction from '../models/Transaction.js'
 
 export const getUserProfile = async (req, res) => {
@@ -59,6 +61,46 @@ export const getReferralInfo = async (req, res) => {
   }
 }
 
+export const updateUserProfile = async (req, res) => {
+  try {
+    const userId = req.user._id; // from auth middleware
+    const { fullName } = req.body;
+    let profileImage = '';
+
+    // Handle image upload if file is present
+    if (req.file) {
+      const streamUpload = (reqFileBuffer) => {
+        return new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            { folder: 'user_profiles' },
+            (error, result) => {
+              if (result) resolve(result);
+              else reject(error);
+            }
+          );
+          const readable = new Readable();
+          readable._read = () => {};
+          readable.push(reqFileBuffer);
+          readable.push(null);
+          readable.pipe(stream);
+        });
+      };
+
+      const uploaded = await streamUpload(req.file.buffer);
+      profileImage = uploaded.secure_url;
+    }
+
+    const updatedFields = {};
+    if (fullName) updatedFields.fullName = fullName;
+    if (profileImage) updatedFields.profileImage = profileImage;
+
+    const updatedUser = await User.findByIdAndUpdate(userId, updatedFields, { new: true });
+    res.json({ msg: 'Profile updated successfully', user: updatedUser });
+  } catch (err) {
+    console.error('Update profile error:', err);
+    res.status(500).json({ msg: 'Failed to update profile' });
+  }
+};
 
 export const getUserTrades = async (req, res) => {
   try {
