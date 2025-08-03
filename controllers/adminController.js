@@ -8,6 +8,7 @@ import History from '../models/History.js'
 import Settings from '../models/Settings.js'
 import Trade from '../models/Trade.js'
 import mongoose from 'mongoose'
+import Announcement from '../models/Announcement.js';
 
      //Admin Auth
 //  Registration
@@ -127,8 +128,6 @@ export const toggleUserHold = async (req, res) => {
     res.status(500).json({ msg: err.message })
   }
 }
-
-
 
 export const impersonateUser = async (req, res) => {
   const { userId } = req.params
@@ -285,7 +284,6 @@ export const createSignal = async (req, res) => {
   }
 }
 
-
 export const getSignalHistory = async (req, res) => {
   try {
     const signals = await Signal.find().sort({ startTime: -1 })
@@ -328,7 +326,6 @@ export const addUserBonus = async (req, res) => {
   }
 }
 
-
 // Admin gives a spin to a user
 export const giveSpin = async (req, res) => {
   const { phone, spins = 1 } = req.body
@@ -368,8 +365,6 @@ export const getRecentActivities = async (req, res) => {
     res.status(500).json({ msg: err.message });
 }
 };
-
-import Announcement from '../models/Announcement.js';
 
 // Get all announcements
 export const getAllAnnouncements = async (req, res) => {
