@@ -384,6 +384,7 @@ export const getAllAnnouncements = async (req, res) => {
 // Create a new announcement
 export const createAnnouncement = async (req, res) => {
   const { title, message } = req.body;
+
   if (!title || !message) {
     return res.status(400).json({ message: 'Title and message are required' });
   }
@@ -392,10 +393,23 @@ export const createAnnouncement = async (req, res) => {
     const announcement = await Announcement.create({
       title,
       message,
+      createdBy: req.user?._id,
     });
+
+    const users = await User.find({ isAdmin: { $ne: true } }, '_id');
+
+    const histories = users.map((user) => ({
+      user: user._id,
+      type: 'announcement',
+      amount: 0,
+      message: `📢 ${title} — ${message}`,
+    }));
+
+    await History.insertMany(histories);
 
     res.status(201).json(announcement);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ message: 'Failed to create announcement' });
   }
 };
