@@ -16,7 +16,10 @@ import {
   getAdminDashboardStats,
   registerAdmin,
   loginAdmin,
-  getRecentActivities
+  getRecentActivities,
+  getAllAnnouncements,
+  createAnnouncement,
+  deleteAnnouncement
 } from '../controllers/adminController.js'
 import { auth, isAdmin } from '../middleware/auth.js'
 
@@ -55,5 +58,9 @@ router.put('/switches/:key/toggle',auth, isAdmin, toggleSwitch)
 // 🎡 Spin Wheel
 router.post('/give-spin',auth, isAdmin, giveSpin)
 router.get('/recent-activities', auth, isAdmin, getRecentActivities);
+
+router.get('/admin/announcements', auth, isAdmin, getAllAnnouncements);
+router.post('/admin/announcements', auth, isAdmin, createAnnouncement);
+router.delete('/admin/announcements/:id', auth, isAdmin, deleteAnnouncement);
 
 export default router
