@@ -2,7 +2,7 @@ import express from 'express'
 import dotenv from 'dotenv'
 import cors from 'cors'
 import connectDB from './config/db.js'
-
+import './cron.js'
 import authRoutes from './routes/authRoutes.js'
 import teamRoutes from './routes/teamRoutes.js'
 import tradeRoutes from './routes/tradeRoutes.js'
@@ -11,6 +11,8 @@ import userRoutes from './routes/userRoutes.js'
 import spinRoutes from './routes/spinRoutes.js'
 import  adminRoutes from './routes/adminRoutes.js'
 import  historyRoutes from './routes/historyRoutes.js'
+import cronRoutes from './routes/cronRoutes.js'
+
 
 
 
@@ -30,7 +32,7 @@ app.use('/api/user', userRoutes)
 app.use('/api/spin', spinRoutes)
 app.use('/api/admin', adminRoutes)
 app.use('/api/history', historyRoutes)
-
+app.use('/api/cron', cronRoutes)
 
 
 
