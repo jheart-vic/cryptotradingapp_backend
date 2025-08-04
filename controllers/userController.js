@@ -30,6 +30,7 @@ export const getUserProfile = async (req, res) => {
       phone: user.phone,
       fullName: user.fullName || '',
       profileImage: user.profileImage || '',
+      inviteCode: user.inviteCode,
       country: user.country || null,
 
       bankName: user.bankName,
