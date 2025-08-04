@@ -3,11 +3,11 @@ import express from 'express'
 import { auth } from '../middleware/auth.js'
 
 import {
-  getActiveSignal
+  getActiveSignals
 } from '../controllers/signalController.js'
 
 const router = express.Router()
 
-router.get('/active', auth, getActiveSignal)
+router.get('/active', auth, getActiveSignals)
 
 export default router
