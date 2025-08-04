@@ -8,6 +8,6 @@ const router = express.Router();
 router.get('/me', auth, getUserProfile);
 router.get('/referral-link', auth, getReferralInfo);
 router.get('/my-trades', auth, getUserTrades);
-router.put('/user/update-profile', auth, upload.single('image'), updateUserProfile);
+router.put('/update-profile', auth, upload.single('image'), updateUserProfile);
 
 export default router;
