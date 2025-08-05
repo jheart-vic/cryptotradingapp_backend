@@ -5,6 +5,7 @@ import Transaction from '../models/Transaction.js'
 import Signal from '../models/Signal.js'
 import { DateTime } from 'luxon'
 import History from '../models/History.js'
+import { coinIdMap } from '../utils/coinGeckoMap.js'
 import Settings from '../models/Settings.js'
 import Trade from '../models/Trade.js'
 import mongoose from 'mongoose'
@@ -254,6 +255,8 @@ export const getSwitches = async (req, res) => {
 }
 
 // 7. Signal Generation
+
+
 export const createSignal = async (req, res) => {
   try {
     const { coin, direction, duration, profitRate } = req.body
@@ -262,23 +265,27 @@ export const createSignal = async (req, res) => {
       return res.status(400).json({ msg: 'All fields are required' })
     }
 
+      const baseSymbol = coin?.split('/')?.[0]?.trim().toUpperCase()
+    const coingeckoId = coinIdMap[baseSymbol]
+    if (!coingeckoId) {
+      return res.status(400).json({ msg: `CoinGecko ID not found for symbol ${baseSymbol}` })
+    }
+
     const startTime = DateTime.now().setZone('Africa/Lagos')
     const endTime = startTime.plus({ hours: 2 })
 
-    const start = startTime.toJSDate()
-    const end = endTime.toJSDate()
-
     const signal = await Signal.create({
       coin,
+      coingeckoId, // ✅ Store here
       direction,
       duration,
       profitRate,
-      startTime: start,
-      endTime: end,
-      createdBy: req.user._id
+      startTime: startTime.toJSDate(),
+      endTime: endTime.toJSDate(),
+      createdBy: req.user._id,
     })
 
-    res.json({ msg: 'Signal created', signal })
+    res.json({ msg: 'Signal created', signal }) // ✅ now includes coingeckoId
   } catch (err) {
     res.status(500).json({ msg: err.message })
   }
