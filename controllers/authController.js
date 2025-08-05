@@ -4,13 +4,24 @@ import User from '../models/User.js'
 import { DateTime } from 'luxon'
 import crypto from 'crypto'
 import { sendVerificationEmail } from '../utils/mailer.js'
+import { customAlphabet } from 'nanoid';
 
 const OTP_EXPIRY_MINUTES = 10;
 const COOLDOWN_SECONDS = 60;
 
-const generateInviteCode = () => {
-  return Math.floor(100000 + Math.random() * 900000).toString()
-}
+
+const generateInviteCode = async () => {
+  const nanoid = customAlphabet('1234567890', 6); // 6-digit numeric code
+  let code;
+  let exists = true;
+
+  while (exists) {
+    code = nanoid();
+    exists = await User.findOne({ inviteCode: code });
+  }
+
+  return code;
+};
 
 export const register = async (req, res) => {
   try {
@@ -20,13 +31,16 @@ export const register = async (req, res) => {
       return res.status(400).json({ msg: 'Passwords do not match' });
     }
 
+    // Check if phone or email already exists
     const existing = await User.findOne({ $or: [{ phone }, { email }] });
     if (existing) {
       return res.status(400).json({ msg: 'User already exists' });
     }
 
     let inviter = null;
+
     if (invitedBy) {
+      // Find inviter by invite code
       inviter = await User.findOne({ inviteCode: invitedBy });
       if (!inviter) {
         return res.status(400).json({ msg: 'Invalid referral code' });
@@ -37,20 +51,22 @@ export const register = async (req, res) => {
     const verificationCode = crypto.randomInt(100000, 999999).toString();
     const expiresAt = DateTime.now().plus({ minutes: OTP_EXPIRY_MINUTES });
 
-    // Create the user object but DO NOT save yet
+    const newInviteCode = await generateInviteCode();
+
+    // Create the user
     const user = new User({
       username,
       phone,
       email,
       password: hashed,
-      invitedBy: invitedBy || null,
-      inviteCode: generateInviteCode(),
+      invitedBy: inviter ? inviter._id : null,
+      inviteCode: newInviteCode,
       isVerified: false,
       verificationCode,
       verificationCodeExpires: expiresAt.toJSDate(),
     });
 
-    // Try sending the verification code
+    // Try to send the verification email
     try {
       await sendVerificationEmail(email, verificationCode);
     } catch (emailErr) {
@@ -58,8 +74,13 @@ export const register = async (req, res) => {
       return res.status(500).json({ msg: 'Failed to send verification email. Please try again.' });
     }
 
-    // Only save if email was successfully sent
     await user.save();
+
+    // Update inviter's invitedUsers array
+    if (inviter) {
+      inviter.invitedUsers.push(user._id);
+      await inviter.save();
+    }
 
     res.json({ msg: 'Registered successfully. Please check your email for verification code.' });
   } catch (err) {
@@ -67,6 +88,7 @@ export const register = async (req, res) => {
     res.status(500).json({ msg: 'Registration failed. ' + err.message });
   }
 };
+
 
 
 export const resendOtp = async (req, res) => {

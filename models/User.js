@@ -8,11 +8,15 @@ const userSchema = new mongoose.Schema({
   fullName: { type: String, default: '' },
   profileImage: { type: String, default: '' },
 
-
   role: { type: String, enum: ['user', 'admin'], default: 'user' },
 
   inviteCode: { type: String, unique: true, sparse: true },
-  invitedBy: { type: String, default: null },
+  invitedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  invitedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
 
   level: { type: Number, default: 0 },
 
