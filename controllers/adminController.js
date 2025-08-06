@@ -335,20 +335,38 @@ export const addUserBonus = async (req, res) => {
 
 // Admin gives a spin to a user
 export const giveSpin = async (req, res) => {
-  const { phone, spins = 1 } = req.body
+  try {
+    const { phone, spins = 1 } = req.body;
 
-  const user = await User.findOne({ phone })
-  if (!user) return res.status(404).json({ message: 'User not found' })
+    if (!phone) {
+      return res.status(400).json({ message: "Phone number is required" });
+    }
 
-  user.spins += spins
-  await user.save()
- await History.create({
-    user: user._id,
-    type: 'spin-reward',
-    message: `You won 1 spin wheel from admin`,
-  })
-  res.json({ message: `${spins} spin(s) given to ${user.username}`, currentSpins: user.spins })
-}
+    const user = await User.findOne({ phone });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    user.spins += Number(spins);
+    await user.save();
+
+    await History.create({
+      user: user._id,
+      type: 'spin-reward',
+      message: `You received ${spins} spin${spins > 1 ? 's' : ''} from admin.`,
+    });
+
+    res.json({
+      message: `${spins} spin${spins > 1 ? 's' : ''} given to ${user.username}`,
+      currentSpins: user.spins,
+    });
+
+  } catch (error) {
+    console.error('Give Spin Error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
 
 // Get recent deposits and withdrawals for admin dashboard
 export const getRecentActivities = async (req, res) => {

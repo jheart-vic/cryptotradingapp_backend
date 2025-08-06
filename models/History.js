@@ -5,26 +5,38 @@ const historySchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
+    required: true
   },
   type: {
     type: String,
-    enum: ['bonus', 'deposit', 'withdrawal', 'trade', 'salary', 'spin-reward','announcement'],
-    required: true,
+    enum: [
+      'bonus',
+      'deposit',
+      'withdrawal',
+      'trade',
+      'salary',
+      'spin-reward',
+      'announcement'
+    ],
+    required: true
   },
   amount: {
     type: Number,
-    required: true,
+    required: function () {
+      return ['deposit', 'withdrawal', 'bonus', 'salary', 'trade'].includes(
+        this.type
+      )
+    }
   },
   message: String,
   createdAt: {
     type: Date,
-    default: Date.now,
+    default: Date.now
   },
   isRead: {
     type: Boolean,
-    default: false,
-  },
+    default: false
+  }
 })
 
 export default mongoose.model('History', historySchema)
