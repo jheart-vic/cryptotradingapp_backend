@@ -4,12 +4,14 @@ import {
   getUnreadCount,
   markAllAsRead,
   markOneAsRead,
+  getAllReadNotifications,
 } from '../controllers/historyController.js';
 import { auth } from '../middleware/auth.js';
 
 const router = express.Router();
 
 router.get('/', auth, getUserHistory);
+router.get('/read', auth, getAllReadNotifications);
 router.get('/unread-count', auth, getUnreadCount);
 router.put('/mark-all', auth, markAllAsRead);
 router.put('/mark/:id', auth, markOneAsRead);
