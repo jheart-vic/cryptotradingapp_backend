@@ -416,12 +416,11 @@ export const createAnnouncement = async (req, res) => {
       createdBy: req.user?._id,
     });
 
-    const users = await User.find({ isAdmin: { $ne: true } }, '_id');
+    const users = await User.find({ role: { $ne: 'admin' } }, '_id');
 
     const histories = users.map((user) => ({
       user: user._id,
       type: 'announcement',
-      amount: 0,
       message: `📢 ${title} — ${message}`,
     }));
 
