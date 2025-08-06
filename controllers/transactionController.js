@@ -1,9 +1,15 @@
 import Transaction from '../models/Transaction.js'
 import User from '../models/User.js'
+import Settings from '../models/Settings.js';
 
 export const requestDeposit = async (req, res) => {
   const { amount, method, walletAddress, bankName, accountNumber } = req.body
   try {
+    const settings = await Settings.findOne()
+    if (settings && settings.depositEnabled === false) {
+      return res.status(403).json({ msg: 'Deposits are currently disabled' })
+    }
+
     const tx = await Transaction.create({
       userId: req.user._id,
       type: 'deposit',
@@ -23,8 +29,15 @@ export const requestDeposit = async (req, res) => {
 export const requestWithdraw = async (req, res) => {
   const { amount, method, walletAddress, bankName, accountNumber } = req.body
   try {
+    const settings = await Settings.findOne()
+    if (settings && settings.withdrawalEnabled === false) {
+      return res.status(403).json({ msg: 'Withdrawals are currently disabled' })
+    }
+
     const user = await User.findById(req.user._id)
-    if (user.balance < amount) return res.status(400).json({ msg: 'Insufficient balance' })
+    if (user.balance < amount) {
+      return res.status(400).json({ msg: 'Insufficient balance' })
+    }
 
     const tx = await Transaction.create({
       userId: user._id,

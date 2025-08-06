@@ -53,7 +53,7 @@ router.get('/signals/history',auth, isAdmin, getSignalHistory)
 
 // ⚙️ Feature switches
 router.get('/switches',auth, isAdmin, getSwitches)
-router.put('/switches/:key/toggle',auth, isAdmin, toggleSwitch)
+router.put('/switches/:type/toggle',auth, isAdmin, toggleSwitch)
 
 // 🎡 Spin Wheel
 router.post('/give-spin',auth, isAdmin, giveSpin)
