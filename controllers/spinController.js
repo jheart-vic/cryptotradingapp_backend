@@ -39,7 +39,7 @@ export const giveSpinToUpline = async (downlineUserId) => {
 export const spinWheel = async (req, res) => {
   const user = await User.findById(req.user._id)
 
-  if (!user.spins || user.spins <= 0) {
+  if (typeof user.spins !== 'number' || user.spins <= 0) {
     return res.status(400).json({ message: 'No spins available' })
   }
 
