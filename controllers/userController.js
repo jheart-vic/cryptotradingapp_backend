@@ -36,6 +36,7 @@ export const getUserProfile = async (req, res) => {
       bankName: user.bankName,
       bankAccount: user.bankAccount,
       cryptoAddress: user.cryptoAddress,
+      spins: user.spins || 0,
 
       balance: user.balance,
       totalDeposit,
