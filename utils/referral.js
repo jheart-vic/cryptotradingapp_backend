@@ -11,7 +11,7 @@ export const getReferralTree = async (userId) => {
   const formatLevel = (users) => ({
     total: users.length,
     valid: users.filter(u => u.hasTraded).length,
-    users: users.map(({ _id, username, phone, hasTraded, createdAt }) => ({
+    users: users.map(({ _id, username, phone,profileImage, fullName, email, hasTraded, createdAt }) => ({
       _id, username, phone, profileImage, fullName, email, hasTraded, createdAt
     }))
   })
