@@ -89,8 +89,6 @@ export const register = async (req, res) => {
   }
 };
 
-
-
 export const resendOtp = async (req, res) => {
   const { email } = req.body
   if (!email) return res.status(400).json({ error: 'Email required' })
@@ -148,25 +146,50 @@ export const verifyEmail = async (req, res) => {
   }
 }
 
-
 export const login = async (req, res) => {
   try {
-    const { phone, password } = req.body
-    const user = await User.findOne({ phone })
-    if (!user) return res.status(400).json({ msg: 'User not found' })
-    if (!user.isVerified) return res.status(401).json({ msg: 'Please verify your email to login' })
+    const { phone, password } = req.body;
 
+    // Find user by phone
+    const user = await User.findOne({ phone });
+    if (!user) {
+      return res.status(400).json({ msg: 'User not found' });
+    }
 
-    const isMatch = await bcrypt.compare(password, user.password)
-    if (!isMatch) return res.status(400).json({ msg: 'Incorrect password' })
+    // If user exists but is not verified
+    if (!user.isVerified) {
+      return res.status(401).json({
+        msg: 'Please verify your email to login',
+        email: user.email
+      });
+    }
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' })
-    res.json({ token, user })
+    // Now check password ONLY if verified
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ msg: 'Incorrect password' });
+    }
+
+    // Generate token
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+
+    // Return token and safe user data
+    res.json({
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        phone: user.phone,
+        email: user.email,
+        isVerified: user.isVerified
+      }
+    });
+
   } catch (err) {
-     console.log(err, "error message")
-    res.status(500).json({ msg: err.message })
+    console.error(err, "error message");
+    res.status(500).json({ msg: 'Server error' });
   }
-}
+};
 
 export const forgotPassword = async (req, res) => {
   try {
