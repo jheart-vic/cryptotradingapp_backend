@@ -181,7 +181,8 @@ export const login = async (req, res) => {
         name: user.name,
         phone: user.phone,
         email: user.email,
-        isVerified: user.isVerified
+        isVerified: user.isVerified,
+        username: user.username
       }
     });
 

@@ -35,7 +35,7 @@ async function createWithdrawalOrder(txId, amount, bankName, bankAccount) {
   const params = {
     merchantId,
     merchantOrderId: txId,
-    amount: amount.toFixed(2),
+    amount: amount,
     bankName,
     bankAccount,
     notifyUrl: `${process.env.BASE_URL}/otpay/webhook`,
