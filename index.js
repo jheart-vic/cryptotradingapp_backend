@@ -12,6 +12,7 @@ import spinRoutes from './routes/spinRoutes.js'
 import  adminRoutes from './routes/adminRoutes.js'
 import  historyRoutes from './routes/historyRoutes.js'
 import cronRoutes from './routes/cronRoutes.js'
+import otpayWebhookRoutes from './routes/otpayWebhook.js';
 
 
 
@@ -33,6 +34,7 @@ app.use('/api/spin', spinRoutes)
 app.use('/api/admin', adminRoutes)
 app.use('/api/history', historyRoutes)
 app.use('/api/cron', cronRoutes)
+app.use('/api/webhook', otpayWebhookRoutes)
 
 
 

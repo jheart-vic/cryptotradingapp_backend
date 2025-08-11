@@ -39,6 +39,7 @@ export const getUserProfile = async (req, res) => {
       spins: user.spins || 0,
 
       balance: user.balance,
+      isVerified: user.isVerified,
       totalDeposit,
       totalWithdraw
     })
