@@ -1,114 +1,336 @@
+// controllers/transactionController.js
+import mongoose from "mongoose";
 import Transaction from "../models/Transaction.js";
 import User from "../models/User.js";
 import Settings from "../models/Settings.js";
 import OTpay from "../helpers/otpay.js";
+import { applyReferralBonus } from "../utils/referralBonus.js";
+import {  giveSpinToUpline } from "../controllers/spinController.js";
+import History from "../models/History.js";
 
-// Deposit request -> OTpay order
+// ----------- CREATE DEPOSIT ORDER -----------
 export const requestDeposit = async (req, res) => {
-  const { amount, method } = req.body;
+  const { amount, firstName, lastName, mobile, email, payType } = req.body;
   try {
     const settings = await Settings.findOne();
     if (settings?.depositEnabled === false) {
       return res.status(403).json({ msg: "Deposits are currently disabled" });
     }
 
-    const tx = await Transaction.create({
+    // Create transaction
+    let tx = await Transaction.create({
       userId: req.user._id,
       type: "deposit",
-      amount,
-      method,
+      amount: Number(amount),
+      method: "otpay",
       status: "pending",
     });
 
-    // Send to OTpay
-    const otRes = await OTpay.createDepositOrder(tx._id.toString(), amount);
-    tx.gatewayResponse = otRes.data;
-    tx.gatewayOrderId = otRes.data?.data?.orderId || null;
+    const merchantOrderId = tx._id.toString();
+
+    // Call OTpay
+    const payload = { firstName, lastName, mobile, email, payType };
+    const otRes = await OTpay.createDepositOrder({
+      merchantOrderId,
+      amount,
+      payload,
+    });
+
+    tx.merchantOrderId = merchantOrderId;
+    tx.gatewayResponse = otRes;
+    tx.gatewayOrderId = otRes?.data?.orderId || null;
     await tx.save();
 
-    res.json({ msg: "Deposit initiated", tx });
+    res.json({ msg: "Deposit initiated", tx, otRes });
   } catch (err) {
+    console.error("requestDeposit error", err);
     res.status(500).json({ msg: err.message });
   }
 };
 
-// Withdraw request -> OTpay payout
+// ----------- CREATE WITHDRAWAL ORDER -----------
 export const requestWithdraw = async (req, res) => {
-  const { amount, bankName, accountNumber } = req.body;
+  const { amount, bankName, accountNumber, accountName, extra } = req.body;
   try {
     const settings = await Settings.findOne();
-    if (settings?.withdrawalEnabled === false) {
+    if (settings?.withdrawEnabled === false) {
       return res.status(403).json({ msg: "Withdrawals are currently disabled" });
     }
 
     const user = await User.findById(req.user._id);
-    if (user.balance < amount) {
+    if (!user || user.balance < amount) {
       return res.status(400).json({ msg: "Insufficient balance" });
     }
 
+    // Deduct immediately
+    user.balance -= amount;
+    await user.save();
+
+    // Create transaction
     const tx = await Transaction.create({
       userId: user._id,
       type: "withdraw",
       amount,
       bankName,
       accountNumber,
+      accountName,
+      method: "otpay",
       status: "pending",
     });
 
-    // Send to OTpay
-    const otRes = await OTpay.createWithdrawalOrder(
-      tx._id.toString(),
+    const merchantOrderId = tx._id.toString();
+
+    // Call OTpay
+    const otRes = await OTpay.createWithdrawalOrder({
+      merchantOrderId,
       amount,
       bankName,
-      accountNumber
-    );
-    tx.gatewayResponse = otRes.data;
-    tx.gatewayOrderId = otRes.data?.data?.orderId || null;
+      accountNumber,
+      accountName,
+      extra,
+    });
+
+    tx.merchantOrderId = merchantOrderId;
+    tx.gatewayResponse = otRes;
+    tx.gatewayOrderId = otRes?.data?.payoutId || null;
     await tx.save();
 
-    res.json({ msg: "Withdrawal initiated", tx });
+    res.json({ msg: "Withdrawal initiated", tx, otRes });
   } catch (err) {
+    console.error("requestWithdraw error", err);
     res.status(500).json({ msg: err.message });
   }
 };
 
+// ----------- HANDLE WEBHOOK CALLBACK -----------
+// export const handleOTpayWebhook = async (req, res) => {
+//   try {
+//     const body = req.body || {};
+//     const { merchantOrderId, status } = body;
 
-export const withdrawRequest = async (req, res) => {
+//     // Verify signature
+//     let valid = false;
+//     if (body.payAmount !== undefined) {
+//       valid = OTpay.verifyDepositCallback(body);
+//     } else {
+//       valid = OTpay.verifyWithdrawalCallback(body);
+//     }
+//     if (!valid) {
+//       console.warn("OTpay webhook invalid sign", body);
+//       return res.status(400).send("invalid sign");
+//     }
+
+//     // Find transaction
+//     let tx = null;
+//     if (merchantOrderId && mongoose.Types.ObjectId.isValid(merchantOrderId)) {
+//       tx = await Transaction.findById(merchantOrderId);
+//     }
+//     if (!tx) {
+//       tx = await Transaction.findOne({
+//         $or: [{ gatewayOrderId: merchantOrderId }, { merchantOrderId }],
+//       });
+//     }
+//     if (!tx) {
+//       console.error("Webhook transaction not found:", merchantOrderId);
+//       return res.status(404).send("transaction not found");
+//     }
+
+//     // Prevent double-processing
+//     if (tx.status !== "pending") {
+//       return res.send("already processed");
+//     }
+
+//     // Update transaction status
+//     if (status === "1") {
+//       tx.status = "approved";
+//     } else if (status === "2") {
+//       tx.status = "failed";
+//     } else {
+//       tx.status = "pending";
+//     }
+//     tx.gatewayResponse = body;
+//     tx.gatewayOrderId = body.orderId || tx.gatewayOrderId;
+
+//     // Business rules
+//     if (status === "1") {
+//       if (tx.type === "deposit") {
+//         const user = await User.findById(tx.userId);
+//         if (user) {
+//           const credit = Number(body.payAmount || body.amount || 0);
+//           user.balance += credit;
+//           user.totalDeposit = (user.totalDeposit || 0) + credit;
+//           await user.save();
+
+//           // Referral bonus (safe)
+//           try {
+//             await applyReferralBonus(user._id, credit);
+//           } catch (err) {
+//             console.error("Referral bonus error:", err);
+//           }
+
+//           // Spin reward (safe, only first deposit)
+//           try {
+//             const txCount = await Transaction.countDocuments({
+//               userId: user._id,
+//               type: "deposit",
+//               status: "approved",
+//             });
+//             if (txCount === 1) {
+//               await giveSpinToUpline(user._id);
+//             }
+//           } catch (err) {
+//             console.error("Spin reward error:", err);
+//           }
+//         }
+//       } else if (tx.type === "withdraw") {
+//         const user = await User.findById(tx.userId);
+//         if (user) {
+//           user.totalWithdraw = (user.totalWithdraw || 0) + tx.amount;
+//           await user.save();
+//         }
+//       }
+//     } else if (status === "2" && tx.type === "withdraw") {
+//       // Refund failed withdrawal
+//       const user = await User.findById(tx.userId);
+//       if (user) {
+//         user.balance += tx.amount;
+//         await user.save();
+//       }
+//     }
+
+//     await tx.save();
+
+//     res.send("success");
+//   } catch (err) {
+//     console.error("Webhook processing error", err);
+//     res.status(500).send("server error");
+//   }
+// };
+
+export const handleOTpayWebhook = async (req, res) => {
   try {
-    const { amount, method, walletAddress, bankName, accountNumber } = req.body;
-    const userId = req.user._id;
+    const body = req.body || {};
+    const { merchantOrderId, status } = body;
 
-    const user = await User.findById(userId);
-    if (user.balance < amount) {
-      return res.status(400).json({ msg: 'Insufficient balance' });
+    // Verify signature
+    let valid = false;
+    if (body.payAmount !== undefined) {
+      valid = OTpay.verifyDepositCallback(body);
+    } else {
+      valid = OTpay.verifyWithdrawalCallback(body);
+    }
+    if (!valid) {
+      console.warn("❌ OTpay webhook invalid sign", body);
+      return res.status(400).send("invalid sign");
     }
 
-    // Create transaction in DB
-    const transaction = await Transaction.create({
-      userId,
-      type: 'withdraw',
-      amount,
-      method,
-      walletAddress,
-      bankName,
-      accountNumber,
-      status: 'pending'
-    });
+    // Find transaction
+    let tx = null;
+    if (merchantOrderId && mongoose.Types.ObjectId.isValid(merchantOrderId)) {
+      tx = await Transaction.findById(merchantOrderId);
+    }
+    if (!tx) {
+      tx = await Transaction.findOne({
+        $or: [{ gatewayOrderId: merchantOrderId }, { merchantOrderId }],
+      });
+    }
+    if (!tx) {
+      console.error("❌ Webhook transaction not found:", merchantOrderId);
+      return res.status(404).send("transaction not found");
+    }
 
-    // Call Otp ay API to send money
-    const response = await axios.post('OTPAY_API_WITHDRAW_URL', {
-      order_id: transaction._id,
-      amount,
-      method,
-      walletAddress,
-      bankName,
-      accountNumber
-    });
+    // Prevent double-processing
+    if (tx.status !== "pending") {
+      return res.send("already processed");
+    }
 
-    // Otp ay will later call your webhook to confirm
-    res.status(200).json({ msg: 'Withdrawal initiated', data: response.data });
+    // Update transaction status
+    if (status === "1") {
+      tx.status = "approved";
+    } else if (status === "2") {
+      tx.status = "failed";
+    } else {
+      tx.status = "pending";
+    }
+    tx.gatewayResponse = body;
+    tx.gatewayOrderId = body.orderId || tx.gatewayOrderId;
+
+    // --- Business rules & History logging ---
+    if (status === "1") {
+      if (tx.type === "deposit") {
+        const user = await User.findById(tx.userId);
+        if (user) {
+          const credit = Number(body.payAmount || body.amount || 0);
+          user.balance += credit;
+          user.totalDeposit = (user.totalDeposit || 0) + credit;
+          await user.save();
+
+          // ✅ Log deposit history
+          await History.create({
+            user: user._id,
+            type: "deposit",
+            amount: credit,
+            message: `Deposit of ₦${credit} approved`,
+          });
+
+          // Referral bonus (safe)
+          try {
+            await applyReferralBonus(user._id, credit);
+          } catch (err) {
+            console.error("Referral bonus error:", err);
+          }
+
+          // Spin reward (safe, only first deposit)
+          try {
+            const txCount = await Transaction.countDocuments({
+              userId: user._id,
+              type: "deposit",
+              status: "approved",
+            });
+            if (txCount === 1) {
+              await giveSpinToUpline(user._id);
+            }
+          } catch (err) {
+            console.error("Spin reward error:", err);
+          }
+        }
+      } else if (tx.type === "withdraw") {
+        const user = await User.findById(tx.userId);
+        if (user) {
+          user.totalWithdraw = (user.totalWithdraw || 0) + tx.amount;
+          await user.save();
+
+          // ✅ Log withdrawal history
+          await History.create({
+            user: user._id,
+            type: "withdrawal",
+            amount: tx.amount,
+            message: `Withdrawal of ₦${tx.amount} is Successful`,
+          });
+        }
+      }
+    } else if (status === "2" && tx.type === "withdraw") {
+      // Refund failed withdrawal
+      const user = await User.findById(tx.userId);
+      if (user) {
+        user.balance += tx.amount;
+        await user.save();
+
+        // ✅ Log refund history
+        await History.create({
+          user: user._id,
+          type: "withdrawal",
+          amount: tx.amount,
+          message: `Withdrawal of ₦${tx.amount} failed and was refunded`,
+        });
+      }
+    }
+
+    await tx.save();
+
+    res.send("success");
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ msg: 'Server error' });
+    console.error("❌ Webhook processing error", err);
+    res.status(500).send("server error");
   }
-};
+}

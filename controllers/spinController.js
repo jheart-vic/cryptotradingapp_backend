@@ -20,7 +20,8 @@ export const giveSpinToUpline = async (downlineUserId) => {
   const downline = await User.findById(downlineUserId);
   if (!downline || !downline.invitedBy) return;
 
-  const upline = await User.findOne({ inviteCode: downline.invitedBy });
+  // invitedBy is already an ObjectId → just fetch directly
+  const upline = await User.findById(downline.invitedBy);
   if (!upline) return;
 
   upline.spins = (upline.spins || 0) + 1;

@@ -8,7 +8,7 @@ export const sendVerificationEmail = async (email, code) => {
       pass: process.env.EMAIL_PASSWORD
     },
       // tls: {
-      //   rejectUnauthorized: false, // ✅ allow self-signed certs (local/dev only)
+      //   rejectUnauthorized: false,
       // },
   })
 

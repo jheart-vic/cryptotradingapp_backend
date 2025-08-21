@@ -1,47 +1,158 @@
 // helpers/otpay.js
-import crypto from "crypto";
-import axios from "axios";
+import crypto from 'crypto'
+import axios from 'axios'
 
-const merchantId = process.env.OTPAY_MERCHANT_ID || "999";
-const appSecret = process.env.OTPAY_APP_SECRET || "bHtSd4DkZSdonKLvtest";
-const baseUrl = "https://pay.otpay.io";
+const MERCHANT_ID = process.env.OTPAY_MERCHANT_ID || '999'
+const APP_SECRET = process.env.OTPAY_APP_SECRET || 'bHtSd4DkZSdonKLvtest'
+const BASE_URL = (process.env.OTPAY_BASE_URL || 'https://xxx').replace(/\/+$/, '')
 
-function generateSign(params, type = "order") {
-  let str = "";
-  if (type === "order" || type === "callback") {
-    str = `merchantId=${params.merchantId}&merchantOrderId=${params.merchantOrderId}&amount=${params.amount}&appSecret=${appSecret}`;
-  } else if (type === "query" || type === "payoutResult") {
-    str = `merchantId=${params.merchantId}&merchantOrderId=${params.merchantOrderId}&appSecret=${appSecret}`;
-  } else if (type === "balance") {
-    str = `merchantId=${params.merchantId}&timestamp=${params.timestamp}&appSecret=${appSecret}`;
+function md5(str) {
+  return crypto.createHash('md5').update(String(str), 'utf8').digest('hex').toLowerCase()
+}
+
+
+// ----- SIGN GENERATION -----
+function generateSign(params = {}, type = 'order') {
+  let str = ''
+  if (type === 'order' || type === 'callback') {
+    str = `merchantId=${MERCHANT_ID}&merchantOrderId=${params.merchantOrderId}&amount=${params.amount}&appSecret=${APP_SECRET}`
+  } else if (type === 'query' || type === 'payoutResult') {
+    str = `merchantId=${MERCHANT_ID}&merchantOrderId=${params.merchantOrderId}&appSecret=${APP_SECRET}`
+  } else if (type === 'balance') {
+    str = `merchantId=${MERCHANT_ID}&timestamp=${params.timestamp}&appSecret=${APP_SECRET}`
   } else {
-    str = `merchantId=${params.merchantId}&appSecret=${appSecret}`;
+    str = `merchantId=${MERCHANT_ID}&appSecret=${APP_SECRET}`
   }
-  return crypto.createHash("md5").update(str).digest("hex");
+  return md5(str)
 }
 
-async function createDepositOrder(txId, amount) {
-  const params = {
-    merchantId,
-    merchantOrderId: txId,
-    amount: amount,
-    notifyUrl: `${process.env.BASE_URL}/otpay/webhook`,
+// ----- GET BANK CODE -----
+async function getBankCode(bankName) {
+  const body = {
+    merchantId: MERCHANT_ID,
+    keyword: bankName
   };
-  params.sign = generateSign(params, "order");
-  return axios.post(`${baseUrl}/api/order/submit`, params);
+  body.sign = generateSign({}, 'bankList');
+
+  const res = await axios.post(`${BASE_URL}/api/payout/bankList`, body);
+
+  console.log("bankList response:", JSON.stringify(res.data, null, 2));
+
+  if (res.data.code !== 0) {
+    throw new Error(res.data.error || 'Failed to fetch bank list');
+  }
+
+  const banks = res.data.data || [];
+  const bank = banks.find(b =>
+    b?.bankName && bankName &&
+    b.bankName.toLowerCase().includes(bankName.toLowerCase())
+  );
+
+  if (!bank) throw new Error(`Bank '${bankName}' not found in OTpay list`);
+  return bank.bankCode;
 }
 
-async function createWithdrawalOrder(txId, amount, bankName, bankAccount) {
-  const params = {
-    merchantId,
-    merchantOrderId: txId,
-    amount: amount,
-    bankName,
-    bankAccount,
-    notifyUrl: `${process.env.BASE_URL}/otpay/webhook`,
+
+
+// ----- CREATE DEPOSIT -----
+async function createDepositOrder({ merchantOrderId, amount, payload = {} }) {
+  const amountStr = parseFloat(amount).toFixed(2)
+  const sign = generateSign({ merchantOrderId, amount: amountStr }, 'order')
+  const body = {
+    merchantId: MERCHANT_ID,
+    merchantOrderId,
+    amount: amountStr,
+    notifyUrl: process.env.OTPAY_NOTIFY_URL,
+    sign,
+    ...payload
+  }
+  const res = await axios.post(`${BASE_URL}/api/order/submit`, body)
+  return res.data
+}
+
+// ----- CREATE WITHDRAWAL -----
+// helpers/otpay.js
+async function createWithdrawalOrder({ merchantOrderId, amount, bankName, accountNumber, accountName, extra = {} }) {
+  const amountStr = parseFloat(amount).toFixed(2);
+  const sign = generateSign({ merchantOrderId, amount: amountStr }, 'order');
+
+  // fetch bankCode
+  const bankCode = await getBankCode(bankName);
+
+  const body = {
+    merchantId: MERCHANT_ID,
+    merchantOrderId,
+    amount: amountStr,
+    notifyUrl: process.env.OTPAY_NOTIFY_URL,
+    sign,
+    fundAccount: {
+      accountType: "bank_account",
+      contact: {
+        name: accountName,
+        email: extra?.email || "test@example.com",
+        mobile: extra?.mobile || "08000000000",
+        address: extra?.address || ""
+      },
+      bankAccount: {
+        name: accountName,
+        bankCode,
+        accountNumber,
+        extra
+      }
+    }
   };
-  params.sign = generateSign(params, "order");
-  return axios.post(`${baseUrl}/api/payout/submit`, params);
+
+  const res = await axios.post(`${BASE_URL}/api/payout/submit`, body);
+  return res.data;
 }
 
-export default { generateSign, createDepositOrder, createWithdrawalOrder };
+
+// ----- QUERY -----
+async function queryOrderStatus(merchantOrderId) {
+  const sign = generateSign({ merchantOrderId }, 'query')
+  const url = `${BASE_URL}/api/order/status?merchantId=${MERCHANT_ID}&merchantOrderId=${merchantOrderId}&sign=${sign}`
+  const res = await axios.get(url)
+  return res.data
+}
+
+async function queryPayout(merchantOrderId) {
+  const sign = generateSign({ merchantOrderId }, 'payoutResult')
+  const body = { merchantId: MERCHANT_ID, merchantOrderId, sign }
+  const res = await axios.post(`${BASE_URL}/api/payout/query`, body)
+  return res.data
+}
+
+async function balanceQuery() {
+  const timestamp = Date.now()
+  const sign = generateSign({ timestamp }, 'balance')
+  const body = { merchantId: MERCHANT_ID, timestamp, sign }
+  const res = await axios.post(`${BASE_URL}/api/payout/balance/query`, body)
+  return res.data
+}
+
+function verifyDepositCallback(body) {
+  const signString = `merchantId=${MERCHANT_ID}&merchantOrderId=${body.merchantOrderId}&amount=${body.payAmount}&appSecret=${APP_SECRET}`;
+  const expected = md5(signString);
+console.log("signString:", signString);
+console.log("expected:", expected);
+console.log("received:", body.sign);
+  return expected === String(body.sign).toLowerCase();
+}
+
+
+function verifyWithdrawalCallback(body) {
+  const expected = generateSign({ merchantOrderId: body.merchantOrderId }, 'payoutResult')
+  return expected === String(body.sign).toLowerCase()
+}
+
+export default {
+  generateSign,
+  createDepositOrder,
+  createWithdrawalOrder,
+  queryOrderStatus,
+  queryPayout,
+  balanceQuery,
+  verifyDepositCallback,
+  verifyWithdrawalCallback,
+  getBankCode
+}

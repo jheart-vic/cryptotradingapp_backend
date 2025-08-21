@@ -10,8 +10,11 @@ const transactionSchema = new mongoose.Schema({
   walletAddress: String,
   bankName: String,
   accountNumber: String,
+  // merchantOrderId: { type: String, unique: true },
 
   status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+  gatewayResponse: { type: Object },
+  gatewayOrderId: { type: String },
 
   createdAt: { type: Date, default: Date.now },
   approvedAt: Date
