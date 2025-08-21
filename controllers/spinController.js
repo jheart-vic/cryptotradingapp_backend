@@ -65,6 +65,7 @@ export const spinWheel = async (req, res) => {
     message: `You won ${reward.label}`,
     reward,
     prizeList: allPrizes,
+    winRange,
     newBalance: user.balance,
     remainingSpins: user.spins
   })
