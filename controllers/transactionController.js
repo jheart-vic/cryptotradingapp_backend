@@ -41,7 +41,7 @@ export const requestDeposit = async (req, res) => {
     tx.gatewayOrderId = otRes?.data?.orderId || null;
     await tx.save();
 
-    res.json({ msg: "Deposit initiated", tx, otRes });
+    res.json({ msg: "Deposit initiated", tx, otRes,  h5Url: otRes?.data?.h5Url || null, });
   } catch (err) {
     console.error("requestDeposit error", err);
     res.status(500).json({ msg: err.message });
