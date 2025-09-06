@@ -116,7 +116,7 @@ async function createDepositOrder({ merchantOrderId, amount, payload = {} }) {
     merchantOrderId,
     amount: amountStr,
     notifyUrl: process.env.OTPAY_NOTIFY_URL,
-    callbackUrl: process.env.OTPAY_CALLBACK_URL || "https://your-frontend.com/deposit-success",
+    callbackUrl: process.envOTPAY_NOTIFY_URL || "https://your-frontend.com/deposit-success",
     payType: payload.payType || 1,
     sign,
     ...payload
