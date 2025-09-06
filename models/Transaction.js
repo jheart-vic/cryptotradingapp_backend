@@ -6,7 +6,7 @@ const transactionSchema = new mongoose.Schema({
   type: { type: String, enum: ['deposit', 'withdraw'], required: true },
   amount: { type: Number, required: true },
 
-  method: { type: String }, // e.g., 'crypto', 'bank'
+  method: { type: String },
   walletAddress: String,
   bankName: String,
   accountNumber: String,

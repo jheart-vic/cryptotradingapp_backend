@@ -13,30 +13,59 @@ function md5(str) {
 
 // ----- SIGN GENERATION -----
 function generateSign(params = {}, type = 'order') {
-  let str = ''
-  if (type === 'order' || type === 'callback') {
-    str = `merchantId=${MERCHANT_ID}&merchantOrderId=${params.merchantOrderId}&amount=${params.amount}&appSecret=${APP_SECRET}`
-  } else if (type === 'query' || type === 'payoutResult') {
-    str = `merchantId=${MERCHANT_ID}&merchantOrderId=${params.merchantOrderId}&appSecret=${APP_SECRET}`
-  } else if (type === 'balance') {
-    str = `merchantId=${MERCHANT_ID}&timestamp=${params.timestamp}&appSecret=${APP_SECRET}`
-  } else {
-    str = `merchantId=${MERCHANT_ID}&appSecret=${APP_SECRET}`
+  let str;
+
+  switch (type) {
+    case 'order':
+    case 'callback':
+      str = `merchantId=${MERCHANT_ID}&merchantOrderId=${params.merchantOrderId}&amount=${params.amount}&appSecret=${APP_SECRET}`;
+      break;
+
+    case 'query':
+    case 'payoutResult':
+      str = `merchantId=${MERCHANT_ID}&merchantOrderId=${params.merchantOrderId}&appSecret=${APP_SECRET}`;
+      break;
+
+    case 'balance':
+      str = `merchantId=${MERCHANT_ID}&timestamp=${params.timestamp}&appSecret=${APP_SECRET}`;
+      break;
+
+    case 'bankList':
+      str = params.keyword
+        ? `merchantId=${MERCHANT_ID}&keyword=${params.keyword}&appSecret=${APP_SECRET}`
+        : `merchantId=${MERCHANT_ID}&appSecret=${APP_SECRET}`;
+      break;
+
+    default:
+      str = `merchantId=${MERCHANT_ID}&appSecret=${APP_SECRET}`;
   }
-  return md5(str)
+
+  return md5(str);
 }
+
+// function generateSign(params = {}, type = 'order') {
+//   let str = ''
+//   if (type === 'order' || type === 'callback') {
+//     str = `merchantId=${MERCHANT_ID}&merchantOrderId=${params.merchantOrderId}&amount=${params.amount}&appSecret=${APP_SECRET}`
+//   } else if (type === 'query' || type === 'payoutResult') {
+//     str = `merchantId=${MERCHANT_ID}&merchantOrderId=${params.merchantOrderId}&appSecret=${APP_SECRET}`
+//   } else if (type === 'balance') {
+//     str = `merchantId=${MERCHANT_ID}&timestamp=${params.timestamp}&appSecret=${APP_SECRET}`
+//   } else {
+//     str = `merchantId=${MERCHANT_ID}&appSecret=${APP_SECRET}`
+//   }
+//   return md5(str)
+// }
 
 // ----- GET BANK CODE -----
 async function getBankCode(bankName) {
   const body = {
     merchantId: MERCHANT_ID,
-    keyword: bankName
+    keyword: bankName || ''
   };
-  body.sign = generateSign({}, 'bankList');
+  body.sign = generateSign({ keyword: bankName }, 'bankList');
 
   const res = await axios.post(`${BASE_URL}/api/payout/bankList`, body);
-
-  console.log("bankList response:", JSON.stringify(res.data, null, 2));
 
   if (res.data.code !== 0) {
     throw new Error(res.data.error || 'Failed to fetch bank list');
@@ -44,13 +73,37 @@ async function getBankCode(bankName) {
 
   const banks = res.data.data || [];
   const bank = banks.find(b =>
-    b?.bankName && bankName &&
-    b.bankName.toLowerCase().includes(bankName.toLowerCase())
+    b?.bankName?.toLowerCase() === bankName?.toLowerCase()
   );
 
   if (!bank) throw new Error(`Bank '${bankName}' not found in OTpay list`);
   return bank.bankCode;
 }
+
+// async function getBankCode(bankName) {
+//   const body = {
+//     merchantId: MERCHANT_ID,
+//     keyword: bankName
+//   };
+//   body.sign = generateSign({}, 'bankList');
+
+//   const res = await axios.post(`${BASE_URL}/api/payout/bankList`, body);
+
+//   console.log("bankList response:", JSON.stringify(res.data, null, 2));
+
+//   if (res.data.code !== 0) {
+//     throw new Error(res.data.error || 'Failed to fetch bank list');
+//   }
+
+//   const banks = res.data.data || [];
+//   const bank = banks.find(b =>
+//     b?.bankName && bankName &&
+//     b.bankName.toLowerCase().includes(bankName.toLowerCase())
+//   );
+
+//   if (!bank) throw new Error(`Bank '${bankName}' not found in OTpay list`);
+//   return bank.bankCode;
+// }
 
 
 
@@ -63,6 +116,8 @@ async function createDepositOrder({ merchantOrderId, amount, payload = {} }) {
     merchantOrderId,
     amount: amountStr,
     notifyUrl: process.env.OTPAY_NOTIFY_URL,
+    callbackUrl: process.env.OTPAY_CALLBACK_URL || "https://your-frontend.com/deposit-success",
+    payType: payload.payType || 1,
     sign,
     ...payload
   }
