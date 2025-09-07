@@ -16,8 +16,12 @@ function generateSign(params = {}, type = 'order') {
   let str;
 
   switch (type) {
-    case 'order':
+    case 'order': // deposit
     case 'callback':
+      str = `merchantId=${MERCHANT_ID}&merchantOrderId=${params.merchantOrderId}&amount=${params.amount}&appSecret=${APP_SECRET}`;
+      break;
+
+    case 'payout': // 👈 NEW case for withdrawals
       str = `merchantId=${MERCHANT_ID}&merchantOrderId=${params.merchantOrderId}&amount=${params.amount}&appSecret=${APP_SECRET}`;
       break;
 
@@ -29,12 +33,14 @@ function generateSign(params = {}, type = 'order') {
     case 'balance':
       str = `merchantId=${MERCHANT_ID}&timestamp=${params.timestamp}&appSecret=${APP_SECRET}`;
       break;
+
     default:
       str = `merchantId=${MERCHANT_ID}&appSecret=${APP_SECRET}`;
   }
 
-  return md5(str);
+  return md5(str).toUpperCase(); // always uppercase per OTpay docs
 }
+
 
 // function generateSign(params = {}, type = 'order') {
 //   let str = ''
@@ -127,7 +133,7 @@ async function createDepositOrder({ merchantOrderId, amount, payload = {} }) {
 // helpers/otpay.js
 async function createWithdrawalOrder({ merchantOrderId, amount, bankName, accountNumber, accountName, extra = {} }) {
   const amountStr = parseFloat(amount).toFixed(2);
-  const sign = generateSign({ merchantOrderId, amount: amountStr }, 'order');
+  const sign = generateSign({ merchantOrderId, amount: amountStr }, 'payout');
 
   // fetch bankCode
   const bankCode = await getBankCode(bankName);
