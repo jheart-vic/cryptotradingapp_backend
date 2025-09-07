@@ -21,7 +21,7 @@ function generateSign(params = {}, type = 'order') {
       str = `merchantId=${MERCHANT_ID}&merchantOrderId=${params.merchantOrderId}&amount=${params.amount}&appSecret=${APP_SECRET}`;
       break;
 
-    case 'payout': // 👈 NEW case for withdrawals
+    case 'payout': // withdrawals
       str = `merchantId=${MERCHANT_ID}&merchantOrderId=${params.merchantOrderId}&amount=${params.amount}&appSecret=${APP_SECRET}`;
       break;
 
@@ -34,40 +34,43 @@ function generateSign(params = {}, type = 'order') {
       str = `merchantId=${MERCHANT_ID}&timestamp=${params.timestamp}&appSecret=${APP_SECRET}`;
       break;
 
+    case 'bankList': // 👈 NEW case for banks
+      str = params.keyword
+        ? `merchantId=${MERCHANT_ID}&keyword=${params.keyword}&appSecret=${APP_SECRET}`
+        : `merchantId=${MERCHANT_ID}&appSecret=${APP_SECRET}`;
+      break;
+
     default:
       str = `merchantId=${MERCHANT_ID}&appSecret=${APP_SECRET}`;
   }
 
-  return md5(str).toUpperCase(); // always uppercase per OTpay docs
+  return md5(str).toUpperCase(); // OTpay expects uppercase
 }
 
 
-// function generateSign(params = {}, type = 'order') {
-//   let str = ''
-//   if (type === 'order' || type === 'callback') {
-//     str = `merchantId=${MERCHANT_ID}&merchantOrderId=${params.merchantOrderId}&amount=${params.amount}&appSecret=${APP_SECRET}`
-//   } else if (type === 'query' || type === 'payoutResult') {
-//     str = `merchantId=${MERCHANT_ID}&merchantOrderId=${params.merchantOrderId}&appSecret=${APP_SECRET}`
-//   } else if (type === 'balance') {
-//     str = `merchantId=${MERCHANT_ID}&timestamp=${params.timestamp}&appSecret=${APP_SECRET}`
-//   } else {
-//     str = `merchantId=${MERCHANT_ID}&appSecret=${APP_SECRET}`
-//   }
-//   return md5(str)
-// }
+// ----- BANK LIST CACHE -----
+let bankListCache = null;
+let bankListCacheTime = 0;
+const CACHE_TTL = 1000 * 60 * 60; // 1 hour cache
 
 // ----- GET BANK CODE -----
 async function getBankCode(bankName) {
+  const now = Date.now();
+
+  // Use cache if still valid
+  if (bankListCache && (now - bankListCacheTime < CACHE_TTL)) {
+    const bank = bankListCache.find(
+      b => b?.bankName?.toLowerCase() === bankName?.toLowerCase()
+    );
+    if (!bank) throw new Error(`Bank '${bankName}' not found in cached OTpay list`);
+    return bank.bankCode;
+  }
+
+  // Otherwise, fetch from OTpay
   const body = {
     merchantId: MERCHANT_ID,
+    sign: md5(`merchantId=${MERCHANT_ID}&appSecret=${APP_SECRET}`).toUpperCase()
   };
-
-  if (bankName) {
-    body.keyword = bankName;
-    body.sign = md5(`merchantId=${MERCHANT_ID}&keyword=${bankName}&appSecret=${APP_SECRET}`).toUpperCase();
-  } else {
-    body.sign = md5(`merchantId=${MERCHANT_ID}&appSecret=${APP_SECRET}`).toUpperCase();
-  }
 
   const res = await axios.post(`${BASE_URL}/api/payout/bankList`, body);
 
@@ -75,34 +78,40 @@ async function getBankCode(bankName) {
     throw new Error(res.data.error || 'Failed to fetch bank list');
   }
 
-  const banks = res.data.data || [];
-  const bank = banks.find(b =>
-    b?.bankName?.toLowerCase() === bankName?.toLowerCase()
-  );
+  // Cache the list
+  bankListCache = res.data.data || [];
+  bankListCacheTime = now;
 
+  // Lookup the bank
+  const bank = bankListCache.find(
+    b => b?.bankName?.toLowerCase() === bankName?.toLowerCase()
+  );
   if (!bank) throw new Error(`Bank '${bankName}' not found in OTpay list`);
   return bank.bankCode;
 }
 
+// ----- GET BANK CODE (without cache) -----
 // async function getBankCode(bankName) {
 //   const body = {
 //     merchantId: MERCHANT_ID,
-//     keyword: bankName
 //   };
-//   body.sign = generateSign({}, 'bankList');
+
+//   if (bankName) {
+//     body.keyword = bankName;
+//   }
+
+//   // Always generate sign centrally
+//   body.sign = generateSign(body, 'bankList');
 
 //   const res = await axios.post(`${BASE_URL}/api/payout/bankList`, body);
-
-//   console.log("bankList response:", JSON.stringify(res.data, null, 2));
 
 //   if (res.data.code !== 0) {
 //     throw new Error(res.data.error || 'Failed to fetch bank list');
 //   }
 
 //   const banks = res.data.data || [];
-//   const bank = banks.find(b =>
-//     b?.bankName && bankName &&
-//     b.bankName.toLowerCase().includes(bankName.toLowerCase())
+//   const bank = banks.find(
+//     b => b?.bankName?.toLowerCase() === bankName?.toLowerCase()
 //   );
 
 //   if (!bank) throw new Error(`Bank '${bankName}' not found in OTpay list`);
@@ -130,7 +139,6 @@ async function createDepositOrder({ merchantOrderId, amount, payload = {} }) {
 }
 
 // ----- CREATE WITHDRAWAL -----
-// helpers/otpay.js
 async function createWithdrawalOrder({ merchantOrderId, amount, bankName, accountNumber, accountName, extra = {} }) {
   const amountStr = parseFloat(amount).toFixed(2);
   const sign = generateSign({ merchantOrderId, amount: amountStr }, 'payout');
