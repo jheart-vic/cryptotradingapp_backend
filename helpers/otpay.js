@@ -29,13 +29,6 @@ function generateSign(params = {}, type = 'order') {
     case 'balance':
       str = `merchantId=${MERCHANT_ID}&timestamp=${params.timestamp}&appSecret=${APP_SECRET}`;
       break;
-
-    case 'bankList':
-      str = params.keyword
-        ? `merchantId=${MERCHANT_ID}&keyword=${params.keyword}&appSecret=${APP_SECRET}`
-        : `merchantId=${MERCHANT_ID}&appSecret=${APP_SECRET}`;
-      break;
-
     default:
       str = `merchantId=${MERCHANT_ID}&appSecret=${APP_SECRET}`;
   }
@@ -61,9 +54,14 @@ function generateSign(params = {}, type = 'order') {
 async function getBankCode(bankName) {
   const body = {
     merchantId: MERCHANT_ID,
-    keyword: bankName || ''
   };
-  body.sign = generateSign({ keyword: bankName }, 'bankList');
+
+  if (bankName) {
+    body.keyword = bankName;
+    body.sign = md5(`merchantId=${MERCHANT_ID}&keyword=${bankName}&appSecret=${APP_SECRET}`).toUpperCase();
+  } else {
+    body.sign = md5(`merchantId=${MERCHANT_ID}&appSecret=${APP_SECRET}`).toUpperCase();
+  }
 
   const res = await axios.post(`${BASE_URL}/api/payout/bankList`, body);
 
