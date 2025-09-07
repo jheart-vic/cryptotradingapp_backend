@@ -44,6 +44,8 @@ function generateSign (params = {}, type = 'order') {
       str = params.keyword
         ? `merchantId=${MERCHANT_ID}&keyword=${params.keyword}&appSecret=${APP_SECRET}`
         : `merchantId=${MERCHANT_ID}&appSecret=${APP_SECRET}`
+   console.log("BankList Sign String:", str);
+
       break
 
     default:
@@ -77,6 +79,7 @@ async function getBankCode (bankName) {
     merchantId: MERCHANT_ID,
     sign: generateSign({}, 'bankList')
   }
+console.log("BankList Sign:", generateSign({}, "bankList"));
 
   const res = await axios.post(`${BASE_URL}/api/payout/bankList`, body)
 
