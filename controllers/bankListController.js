@@ -1,7 +1,11 @@
 import axios from "axios";
 import dotenv from 'dotenv'
-import md5 from "md5";
+import crypto from 'crypto';
 dotenv.config()
+
+function md5(str) {
+  return crypto.createHash("md5").update(str).digest("hex");
+}
 
 const MERCHANT_ID = process.env.OTPAY_MERCHANT_ID;
 const APP_SECRET = process.env.OTPAY_APP_SECRET;

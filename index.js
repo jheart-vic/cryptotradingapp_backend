@@ -14,7 +14,7 @@ import  historyRoutes from './routes/historyRoutes.js'
 import cronRoutes from './routes/cronRoutes.js'
 import otpayWebhookRoutes from './routes/otpayWebhook.js';
 import otpayRoutes from './routes/otpayRoutes.js';
-import bankRoutes from "./routes/bankRoutes.js";
+import bankRoutes from "./routes/bankListRoutes.js";
 
 
 
