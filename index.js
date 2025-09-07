@@ -14,6 +14,7 @@ import  historyRoutes from './routes/historyRoutes.js'
 import cronRoutes from './routes/cronRoutes.js'
 import otpayWebhookRoutes from './routes/otpayWebhook.js';
 import otpayRoutes from './routes/otpayRoutes.js';
+import bankRoutes from "./routes/bankRoutes.js";
 
 
 
@@ -37,7 +38,7 @@ app.use('/api/history', historyRoutes)
 app.use('/api/cron', cronRoutes)
 app.use('/api/webhook', otpayWebhookRoutes)
 app.use('/api/otpay', otpayRoutes);
-
+app.use("/api/banks", bankRoutes);
 
 const PORT = process.env.PORT || 5000
 app.listen(PORT, () => {
