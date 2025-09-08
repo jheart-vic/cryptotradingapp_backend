@@ -15,6 +15,7 @@ import cronRoutes from './routes/cronRoutes.js'
 import otpayWebhookRoutes from './routes/otpayWebhook.js';
 import otpayRoutes from './routes/otpayRoutes.js';
 import bankRoutes from "./routes/bankListRoutes.js";
+import bankVerificationRoutes from "./routes/bankVerificationRoutes.js";
 
 
 
@@ -39,6 +40,7 @@ app.use('/api/cron', cronRoutes)
 app.use('/api/webhook', otpayWebhookRoutes)
 app.use('/api/otpay', otpayRoutes);
 app.use("/api/banks", bankRoutes);
+app.use("/api/verify-account", bankVerificationRoutes);
 
 const PORT = process.env.PORT || 5000
 app.listen(PORT, () => {
