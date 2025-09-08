@@ -4,7 +4,7 @@ import crypto from 'crypto';
 dotenv.config()
 
 function md5(str) {
-  return crypto.createHash("md5").update(str).digest("hex");
+  return crypto.createHash("md5").update(str).digest("hex").toLowerCase();
 }
 
 const MERCHANT_ID = process.env.OTPAY_MERCHANT_ID;
@@ -25,9 +25,11 @@ export async function getBankList(req, res) {
 
     const body = {
       merchantId: MERCHANT_ID,
-      sign: md5(`merchantId=${MERCHANT_ID}&appSecret=${APP_SECRET}`).toUpperCase()
+      sign: md5(`merchantId=${MERCHANT_ID}&appSecret=${APP_SECRET}`)
     };
 
+console.log("BankList Request Body:", body);
+console.log("BankList Sign String Used:", `merchantId=${MERCHANT_ID}&appSecret=${APP_SECRET}`);
     const otpayRes = await axios.post(`${BASE_URL}/api/payout/bankList`, body);
 
     if (otpayRes.data.code !== 0) {
