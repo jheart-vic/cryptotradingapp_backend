@@ -130,10 +130,6 @@ async function createWithdrawalOrder({
   return res.data;
 }
 
-export { generateSign, getBankCode, createWithdrawalOrder };
-
-
-
 // ----- CREATE DEPOSIT -----
 async function createDepositOrder ({ merchantOrderId, amount, payload = {} }) {
   const amountStr = parseFloat(amount).toFixed(2)

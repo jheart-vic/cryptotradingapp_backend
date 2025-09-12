@@ -40,8 +40,8 @@ export const getUserProfile = async (req, res) => {
 
       balance: user.balance,
       isVerified: user.isVerified,
-      totalDeposit,
-      totalWithdraw
+      totalDeposit: user.totalDeposit || totalDeposit,
+      totalWithdraw: user.totalWithdraw || totalWithdraw,
     })
   } catch (err) {
     res.status(500).json({ msg: err.message })
